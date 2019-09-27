@@ -5,24 +5,62 @@
 #include <assert.h>
 #include <float.h>
 #include <limits.h>
-#ifdef WIN32
-#include "unistd.h"
-#include "gettimeofday.h"
-#else
-#include <unistd.h>
-#include <sys/time.h>
-#endif
+#include <time.h>
+
 #include "utils.h"
 
-#pragma warning(disable: 4996)
+#if defined(_WIN32) && !defined(__CYGWIN__)
+  #include <unistd.h>
+  #include <Windows.h>
+  #pragma warning(disable: 4996)
+#elif MAC
+
+#else
+ #include <unistd.h>
+ #include <sys/time.h>
+#endif
 
 double what_time_is_it_now()
 {
-	struct timeval time;
-	if (gettimeofday(&time, NULL)) {
-		return 0;
-	}
-	return (double)time.tv_sec + (double)time.tv_usec * .000001;
+#if defined(_WIN32) && !defined(__CYGWIN__)
+  FILETIME ft;
+  GetSystemTimeAsFileTime(&ft);
+  return (429.4967296*ft.dwHighDateTime
+    + 0.0000001*ft.dwLowDateTime
+    - 11644473600.0);
+#else
+  struct timeval t;
+  gettimeofday(&t, 0);
+  return 1.0*(double)t.tv_sec + 0.000001*(double)t.tv_usec;
+
+  // Inconsistent support for clock_gettime on various platforms
+  //struct timespec now;
+  //clock_gettime(CLOCK_REALTIME, &now);
+  //return now.tv_sec + now.tv_nsec*1e-9;
+#endif
+}
+
+int *read_intlist(char *gpu_list, int *ngpus, int d)
+{
+    int *gpus = 0;
+    if(gpu_list){
+        int len = strlen(gpu_list);
+        *ngpus = 1;
+        int i;
+        for(i = 0; i < len; ++i){
+            if (gpu_list[i] == ',') ++*ngpus;
+        }
+        gpus = calloc(*ngpus, sizeof(int));
+        for(i = 0; i < *ngpus; ++i){
+            gpus[i] = atoi(gpu_list);
+            gpu_list = strchr(gpu_list, ',')+1;
+        }
+    } else {
+        gpus = calloc(1, sizeof(float));
+        *gpus = d;
+        *ngpus = 1;
+    }
+    return gpus;
 }
 
 int *read_map(char *filename)
@@ -57,7 +95,7 @@ void shuffle(void *arr, size_t n, size_t size)
     void *swp = calloc(1, size);
     for(i = 0; i < n-1; ++i){
         size_t j = i + rand()/(RAND_MAX / (n-i)+1);
-        memcpy(swp,			(char*)arr+(j*size), size);
+        memcpy(swp,                 (char*)arr+(j*size), size);
         memcpy((char*)arr+(j*size), (char*)arr+(i*size), size);
         memcpy((char*)arr+(i*size), swp,          size);
     }
@@ -133,11 +171,14 @@ char *basecfg(char *cfgfile)
 {
     char *c = cfgfile;
     char *next;
+#ifdef WIN32
+    while((next = strchr(c, '\\')))
+#else
     while((next = strchr(c, '/')))
+#endif
     {
         c = next+1;
     }
-	if(!next) while ((next = strchr(c, '\\'))) { c = next + 1; }
     c = copy_string(c);
     next = strchr(c, '.');
     if (next) *next = 0;
@@ -181,6 +222,26 @@ void find_replace(char *str, char *orig, char *rep, char *output)
     *p = '\0';
 
     sprintf(output, "%s%s%s", buffer, rep, p+strlen(orig));
+}
+
+void find_replace_ext(char *str, char *orig, char *rep, char *output)
+{
+    char buffer[4096] = {0};
+    char *p;
+
+    sprintf(buffer, "%s", str);
+
+    if( (p = strrchr(str,'.') ) != NULL)
+    {
+        if(strcmp(p,orig) == 0)
+        {
+            p = strrchr(buffer,'.');
+            strcpy(p,rep);
+            sprintf(output, "%s", buffer);
+        }
+    }
+
+    sprintf(output, "%s", str);
 }
 
 float sec(clock_t clocks)
@@ -297,8 +358,7 @@ char *fgetl(FILE *fp)
         fgets(&line[curr], readsize, fp);
         curr = strlen(line);
     }
-    if(line[curr-2] == 0x0d) line[curr-2] = 0x00;
-    if(line[curr-1] == 0x0a) line[curr-1] = 0x00;
+    if(line[curr-1] == '\n') line[curr-1] = '\0';
 
     return line;
 }
@@ -556,23 +616,25 @@ int max_index(float *a, int n)
     return max_i;
 }
 
-int int_index(int *a, int val, int n)
+int rand_int()
 {
-	int i;
-	for (i = 0; i < n; ++i) {
-		if (a[i] == val) return i;
-	}
-	return -1;
+#ifdef MSVC
+    unsigned int rand_int = 0;
+    rand_s( &rand_int );
+    return abs( rand_int );
+#else
+    return rand();
+#endif
 }
 
-int rand_int(int min, int max)
+int rand_int_in_range(int min, int max)
 {
     if (max < min){
         int s = min;
         min = max;
         max = s;
     }
-    int r = (rand()%(max - min + 1)) + min;
+    int r = (rand_int()%(max - min + 1)) + min;
     return r;
 }
 
@@ -612,13 +674,13 @@ float rand_normal()
 size_t rand_size_t()
 {
     return  ((size_t)(rand()&0xff) << 56) | 
-            ((size_t)(rand()&0xff) << 48) |
-            ((size_t)(rand()&0xff) << 40) |
-            ((size_t)(rand()&0xff) << 32) |
-            ((size_t)(rand()&0xff) << 24) |
-            ((size_t)(rand()&0xff) << 16) |
-            ((size_t)(rand()&0xff) << 8) |
-            ((size_t)(rand()&0xff) << 0);
+        ((size_t)(rand()&0xff) << 48) |
+        ((size_t)(rand()&0xff) << 40) |
+        ((size_t)(rand()&0xff) << 32) |
+        ((size_t)(rand()&0xff) << 24) |
+        ((size_t)(rand()&0xff) << 16) |
+        ((size_t)(rand()&0xff) << 8) |
+        ((size_t)(rand()&0xff) << 0);
 }
 
 float rand_uniform(float min, float max)
@@ -629,13 +691,12 @@ float rand_uniform(float min, float max)
         max = swap;
     }
     return ((float)rand()/RAND_MAX * (max - min)) + min;
-	//return (random_float() * (max - min)) + min;
 }
 
 float rand_scale(float s)
 {
-    float scale = rand_uniform_strong(1, s);
-    if(random_gen()%2) return scale;
+    float scale = rand_uniform(1, s);
+    if(rand()%2) return scale;
     return 1./scale;
 }
 
@@ -651,32 +712,3 @@ float **one_hot_encode(float *a, int n, int k)
     return t;
 }
 
-unsigned int random_gen()
-{
-	unsigned int rnd = 0;
-#ifdef WIN32
-	rand_s(&rnd);
-#else
-	rnd = rand();
-#endif
-	return rnd;
-}
-
-float random_float()
-{
-#ifdef WIN32
-	return ((float)random_gen() / (float)UINT_MAX);
-#else
-	return ((float)random_gen() / (float)RAND_MAX);
-#endif
-}
-
-float rand_uniform_strong(float min, float max)
-{
-	if (max < min) {
-		float swap = min;
-		min = max;
-		max = swap;
-	}
-	return (random_float() * (max - min)) + min;
-}
