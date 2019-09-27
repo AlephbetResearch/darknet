@@ -1,24 +1,21 @@
-project( Darknet )
-
-cmake_minimum_required( VERSION 3.0 )
-
 if( WIN32 )
   OPTION( BUILD_SHARED_LIBS  "Build components shared or not"  FALSE )
 
   if( BUILD_SHARED_LIBS )
-    message( FATAL_ERROR "Currently only static builds are supported on windows" )
+    message("Currently only static builds are supported on windows" )
   endif()
 else()
   OPTION( BUILD_SHARED_LIBS  "Build components shared or not"  TRUE )
 endif()
 
-OPTION( USE_GPU      "Use GPU support"      FALSE )
-OPTION( USE_CUDNN    "Use CUDNN support"    FALSE )
-OPTION( USE_OPENCV   "Use OpenCV support"   FALSE )
+OPTION( DARKNET_DARKNET_USE_GPU      "Use GPU support"      FALSE )
+OPTION( DARKNET_USE_CUDNN    "Use CUDNN support"    FALSE )
+OPTION( DARKNET_USE_OPENCV   "Use OpenCV support"   FALSE )
 
 find_package( Threads )
 
-include_directories( ${CMAKE_SOURCE_DIR}/include )
+include_directories( ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/libs/darknet/include)
 
 if( WIN32 )
   set( DARKNET_LINKED_LIBS )
@@ -33,12 +30,12 @@ else()
   set( DARKNET_LINKED_LIBS m )
 endif()
 
-if( USE_GPU )
-  find_package( CUDA QUIET REQUIRED )
+if( DARKNET_USE_GPU )
+  #find_package( CUDA QUIET REQUIRED )
   include_directories( ${CUDA_TOOLKIT_ROOT_DIR}/include )
   add_definitions( -DGPU )
 
-  if( USE_CUDNN )
+  if( DARKNET_USE_CUDNN )
     set( CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -DCUDNN )
   endif()
 
@@ -60,47 +57,47 @@ if( USE_GPU )
   endif()
 endif()
 
-if( USE_CUDNN )
+if( DARKNET_USE_CUDNN )
   # Set this if cuda and cudnn are in seperate locations
   set( CUDNN_ROOT_DIR "" CACHE PATH "CUDNN root folder" )
 
-  if(NOT USE_GPU)
+  if(NOT DARKNET_USE_GPU)
     message(FATAL_ERROR "Enable GPU support when wanting to use CUDNN")
   endif()
 
-  find_library( CUDNN_LIBRARIES
-    NAMES cudnn libcudnn
-    HINTS ${CUDNN_ROOT_DIR}
-          ${CUDA_TOOLKIT_ROOT_DIR}
-    PATH_SUFFIXES lib lib64 lib/x64 lib/x86 targets/aarch64-linux
-  )
+  #find_library( CUDNN_LIBRARIES
+  #  NAMES cudnn libcudnn
+  #  HINTS ${CUDNN_ROOT_DIR}
+  #        ${CUDA_TOOLKIT_ROOT_DIR}
+  #  PATH_SUFFIXES lib lib64 lib/x64 lib/x86 targets/aarch64-linux
+  #)
 
-  if(NOT CUDNN_LIBRARIES)
-    message(FATAL_ERROR "Unable to find cudnn libraries, please ensure \
-      CUDA_TOOLKIT_ROOT_DIR has cudnn or the CUDNN_ROOT_DIR variable is \
-      properly set or set CUDNN_LIBRARIES" )
-  endif()
+  #if(NOT CUDNN_LIBRARIES)
+  #  message(FATAL_ERROR "Unable to find cudnn libraries, please ensure \
+  #    CUDA_TOOLKIT_ROOT_DIR has cudnn or the CUDNN_ROOT_DIR variable is \
+  #    properly set or set CUDNN_LIBRARIES" )
+  #endif()
 
-  if(CUDNN_ROOT_DIR)
-    include_directories( SYSTEM ${CUDNN_ROOT_DIR}/include )
-  endif()
+  #if(CUDNN_ROOT_DIR)
+  #  include_directories( SYSTEM ${CUDNN_ROOT_DIR}/include )
+  #endif()
 
   list( APPEND DARKNET_LINKED_LIBS ${CUDNN_LIBRARIES} )
   add_definitions( -DCUDNN )
 endif()
 
-if( USE_OPENCV )
-  find_package( OpenCV REQUIRED )
+if( DARKNET_USE_OPENCV )
+  #find_package( OpenCV REQUIRED )
 
-  include_directories( SYSTEM ${OpenCV_INCLUDE_DIRS} )
+  #include_directories( SYSTEM ${OpenCV_INCLUDE_DIRS} )
   add_definitions( -DOPENCV )
   add_definitions( -DCV_MAJOR_VERSION=${OpenCV_VERSION_MAJOR} )
-  add_definitions( -DCV_IGNORE_DEBUG_BUILD_GUARD )
+  #add_definitions( -DCV_IGNORE_DEBUG_BUILD_GUARD )
   list( APPEND DARKNET_LINKED_LIBS opencv_core opencv_highgui opencv_imgproc )
 
-  if( OpenCV_VERSION_MAJOR GREATER 2 )
-    list( APPEND DARKNET_LINKED_LIBS opencv_videoio opencv_imgcodecs )
-  endif()
+  #if( OpenCV_VERSION_MAJOR GREATER 2 )
+  #  list( APPEND DARKNET_LINKED_LIBS opencv_videoio opencv_imgcodecs )
+  #endif()
 endif()
 
 if( WIN32 )

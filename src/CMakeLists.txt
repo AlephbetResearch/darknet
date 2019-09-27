@@ -141,14 +141,16 @@ else()
         ${headers}
         ${source}
         ${CUDA_SRC}
-        ${openCV_LIBS}
+
         )
 endif()
 target_link_libraries( darknet_lib
     PRIVATE  ${CMAKE_THREAD_LIBS_INIT}
     ${DARKNET_LINKED_LIBS}
-
+    ${openCV_LIBS}
     )
+
+target_compile_features(darknet_lib PUBLIC cxx_std_11)
 
 target_include_directories(darknet_lib PUBLIC
     ${openCV_INCLUDE_DIR})
