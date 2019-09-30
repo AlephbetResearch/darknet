@@ -22,8 +22,9 @@ add_executable( darknet
   writing.c
   yolo.c )
 
+
 target_link_libraries( darknet
-  darknet_lib
+  darknetLib
   ${CMAKE_THREAD_LIBS_INIT} ${DARKNET_LINKED_LIBS}
   )
 target_include_directories(darknet PRIVATE ${CMAKE_SOURCE_DIR}/src)

@@ -5,7 +5,7 @@ if( WIN32 )
     message("Currently only static builds are supported on windows" )
   endif()
 else()
-  OPTION( BUILD_SHARED_LIBS  "Build components shared or not"  TRUE )
+  OPTION( BUILD_SHARED_LIBS  "Build components shared or not"  FALSE )
 endif()
 
 OPTION( DARKNET_DARKNET_USE_GPU      "Use GPU support"      FALSE )
@@ -125,7 +125,7 @@ endif()
 set(DARKNET_PACKAGE_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include)
 set(DARKNET_PACKAGE_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib)
 configure_file( DarknetConfig.cmake.in
-  ${CMAKE_BINARY_DIR}/DarknetConfig.cmake @ONLY )
+  ${CMAKE_SOURCE_DIR}/cmake/DarknetConfig.cmake @ONLY )
 
 # now make a package description that references the install locations include and libs
 # this file will be installed to the requested install location when an install is requested

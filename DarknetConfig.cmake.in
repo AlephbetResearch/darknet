@@ -4,7 +4,7 @@
 # From build tree
 set( Darknet_INCLUDE_DIR "@DARKNET_PACKAGE_INCLUDE_DIR@")
 set( Darknet_LIBRARY_DIR "@DARKNET_PACKAGE_LIBRARY_DIR@" )
-set( Darknet_LIBRARIES "darknet_lib" )
-set( Darknet_USING_OPENCV  @USE_OPENCV@ )
-set( Darknet_USING_GPU     @USE_GPU@ )
-set( Darknet_USING_CUDNN   @USE_CUDNN@ )
+set( Darknet_LIBRARIES "darknetLib" )
+set( Darknet_USING_OPENCV  @DARKNET_USE_OPENCV@ )
+set( Darknet_USING_GPU     @DARKNET_USE_GPU@ )
+set( Darknet_USING_CUDNN   @DARKNET_USE_CUDNN@ )

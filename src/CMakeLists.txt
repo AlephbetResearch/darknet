@@ -129,36 +129,44 @@ if( DARKNET_USE_GPU )
         ${CUDA_curand_LIBRARY} )
 endif()
 
-if(DARKNET_MAKE_SHARED)
-    add_library( darknet_lib SHARED
-        ${headers}
-        ${source}
-        ${CUDA_SRC}
-        ${openCV_LIBS}
-        )
-else() 
-    add_library( darknet_lib
-        ${headers}
-        ${source}
-        ${CUDA_SRC}
+add_library( darknetLib SHARED
+    ${headers}
+    ${source}
+    ${CUDA_SRC}
+    )
 
-        )
-endif()
-target_link_libraries( darknet_lib
+target_link_libraries( darknetLib
     PRIVATE  ${CMAKE_THREAD_LIBS_INIT}
     ${DARKNET_LINKED_LIBS}
     ${openCV_LIBS}
     )
 
-target_compile_features(darknet_lib PUBLIC cxx_std_11)
+target_compile_features(darknetLib PUBLIC cxx_std_11)
 
-target_include_directories(darknet_lib PUBLIC
+target_include_directories(darknetLib PUBLIC
     ${openCV_INCLUDE_DIR})
 
-set(DARKNET_LIBS darknet-lib)
+set(DARKNET_LIBS darknetLib)
 set(DARKNET_INCLUDE_DIR libs/darknet/src)
 
-install( TARGETS darknet_lib
+if(WINDOWS)
+    set_target_properties(darknetLib PROPERTIES
+        LINK_FLAGS /SUBSYSTEM:CONSOLE
+        VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
+        SOVERSION ${VERSION_MAJOR}
+        CXX_VISIBILITY_PRESET default
+        )
+else()
+    set_target_properties(darknetLib PROPERTIES
+        VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
+        SOVERSION ${VERSION_MAJOR}
+        CXX_VISIBILITY_PRESET default
+        )
+
+endif()
+
+
+install( TARGETS darknetLib
     ARCHIVE DESTINATION     lib
     LIBRARY DESTINATION     lib
     RUNTIME DESTINATION     bin
